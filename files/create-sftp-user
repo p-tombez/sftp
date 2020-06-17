@@ -81,10 +81,18 @@ else
 fi
 
 # Add SSH keys to authorized_keys with valid permissions
-if [ -d "/home/$user/.ssh/keys" ]; then
-    for publickey in "/home/$user/.ssh/keys"/*; do
-        cat "$publickey" >> "/home/$user/.ssh/authorized_keys"
-    done
+PUBKEY_NAME="${user^^}_PUBKEY"
+PUBKEY_CONTENT=${!PUBKEY_NAME}
+if [[ -d "/home/$user/.ssh/keys" || -n "$PUBKEY_CONTENT" ]]; then
+    if [ -d "/home/$user/.ssh/keys" ]; then
+        for publickey in "/home/$user/.ssh/keys"/*; do
+            cat "$publickey" >> "/home/$user/.ssh/authorized_keys"
+        done
+    fi
+    if [ -n "$PUBKEY_CONTENT" ]; then
+        mkdir -p "/home/$user/.ssh"
+        echo "$PUBKEY_CONTENT" >> "/home/$user/.ssh/authorized_keys"
+    fi
     chown "$uid" "/home/$user/.ssh/authorized_keys"
     chmod 600 "/home/$user/.ssh/authorized_keys"
 fi

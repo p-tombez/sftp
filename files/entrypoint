@@ -16,6 +16,13 @@ function log() {
     echo "[$0] $*" >&2
 }
 
+function bindmount() {
+    if [ -d "$1" ]; then
+        mkdir -p "$2"
+    fi
+    mount --bind $3 "$1" "$2"
+}
+
 # Allow running other programs, e.g. bash
 if [[ -z "$1" || "$1" =~ $reArgsMaybe ]]; then
     startSshd=true
@@ -65,12 +72,27 @@ if [ ! -f "$userConfFinalPath" ]; then
     fi
 
     # Generate unique ssh keys for this container, if needed
-    if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
+    if [ ! -n "$ED25519_KEY" ]; then
         ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ''
+    else
+        echo "$ED25519_KEY" > /etc/ssh/ssh_host_ed25519_key
+        chmod 600 /etc/ssh/ssh_host_ed25519_key*
     fi
-    if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
+    if [ ! -n "$RSA_KEY" ]; then
         ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ''
+    else
+        echo "$RSA_KEY" > /etc/ssh/ssh_host_rsa_key
+        chmod 600 /etc/ssh/ssh_host_rsa_key
     fi
+fi
+
+if [ -n "$SFTP_MASTER_USER" ]; then
+    for d in /home/*/; do
+        user=$(basename "$d")
+        if [[ "$user" != "$SFTP_MASTER_USER" ]]; then
+            bindmount $d /home/$SFTP_MASTER_USER/$user
+        fi
+    done
 fi
 
 # Source custom scripts, if any
